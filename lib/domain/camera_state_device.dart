@@ -69,9 +69,7 @@ class CameraStateDevice extends GetxController implements CameraState {
 
   @override
   Future prepareImage(XFile pic) async {
-    Image img = decodeImage(await pic.readAsBytes())!;
-
-    final src = copyRotate(img, angle: 90);
+    Image src = decodeImage(await pic.readAsBytes())!;
 
     Rect rect = Rect.fromCenter(
       center: Offset(src.width / 2, src.height / 2),
