@@ -4,9 +4,8 @@ import 'package:photo_data_picker/domain/camera_state.dart';
 import 'package:photo_data_picker/ui/widget/cam_prev_widget.dart';
 
 class CameraScreen extends StatefulWidget {
-  CameraScreen({Key? key, this.meterName})
-      : state = Get.find<CameraState>(),
-        super(key: key);
+  CameraScreen({super.key, this.meterName})
+      : state = Get.find<CameraState>();
   final CameraState state;
   final String? meterName;
 
@@ -31,11 +30,8 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        dispose();
-        return true;
-      },
+    return PopScope(
+      onPopInvoked: (_) => dispose(),
       child: SafeArea(
         child: Scaffold(
           appBar: AppBar(
@@ -66,7 +62,6 @@ class _CameraScreenState extends State<CameraScreen> {
                           controller: textCtrl,
                           showCursor: true,
                           keyboardType: TextInputType.number,
-                          style: Theme.of(context).textTheme.headline5,
                           textAlign: TextAlign.center,
                           onSubmitted: _setValue,
                           onChanged: _setValue,
@@ -76,7 +71,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                   onPressed: () {
                                     // Navigator.pop(context, _.reading.value);
                                     // Get.back(result: _.reading.value);
-                                      widget.state.returnBackWithValue!(_.reading.value);
+                                      widget.state.returnBackWithValue(_.reading.value);
 
                                   },
                                   icon: const Icon(Icons.check))),
