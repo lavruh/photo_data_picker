@@ -1,16 +1,18 @@
 import 'dart:io';
 
-import 'package:google_ml_vision/google_ml_vision.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+
 
 class Recognizer {
   late File inp;
-  final TextRecognizer textRecognizer = GoogleVision.instance.textRecognizer();
+  final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
   Future<String> recognizeReading() async {
-    final GoogleVisionImage visionImage = GoogleVisionImage.fromFile(inp);
-    final VisionText visionText =
-        await textRecognizer.processImage(visionImage);
-    return visionText.text ?? "";
+    final inputImage = InputImage.fromFile(inp);
+    final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
+
+    final text = recognizedText.text;
+    return text;
   }
 
   String cleanString(String inp) {
