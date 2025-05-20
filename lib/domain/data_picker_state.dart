@@ -4,16 +4,15 @@ import 'dart:ui';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart';
 import 'package:image/image.dart';
 
 import 'package:photo_data_picker/domain/recognizer.dart';
 
-class DataPickerState extends GetxController {
+class DataPickerState extends ChangeNotifier {
   CameraController? camCtrl;
   FlashMode flashMode = FlashMode.off;
-  Function(String val)? returnWithValue;
-  final reading = "".obs;
+  final Function(String val)? returnWithValue;
+  String reading = "";
   final Recognizer rec = Recognizer();
   Uint8List? recognizeRegion;
   final Offset recognizerRelation = Offset(0.6, 0.08);
@@ -50,7 +49,7 @@ class DataPickerState extends GetxController {
       final dataImg = await prepareImage(pic);
       recognizeRegion = encodeJpg(dataImg);
 
-      reading.value = await rec.recognizeReading(
+      reading = await rec.recognizeReading(
         encodeJpg(dataImg),
         width: dataImg.width,
         height: dataImg.height,
@@ -118,9 +117,11 @@ class DataPickerState extends GetxController {
     update();
   }
 
-  returnBackWithValue(String value) {
-    if (returnWithValue != null) {
-      returnWithValue!(value);
-    }
+  returnBackWithValue() {
+    final fnk = returnWithValue;
+    if (fnk == null) return;
+    fnk(reading);
   }
+
+  void update() => notifyListeners();
 }

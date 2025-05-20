@@ -4,9 +4,23 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_data_picker/domain/data_picker_state.dart';
 
-class DataPickerWidget extends StatelessWidget {
+class DataPickerWidget extends StatefulWidget {
   const DataPickerWidget({super.key, required this.state});
   final DataPickerState state;
+
+  @override
+  State<DataPickerWidget> createState() => _DataPickerWidgetState();
+}
+
+class _DataPickerWidgetState extends State<DataPickerWidget> {
+  late final DataPickerState state;
+
+  @override
+  void initState() {
+    state = widget.state;
+    state.addListener(() => setState(() {}));
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +31,7 @@ class DataPickerWidget extends StatelessWidget {
     final controller = state.camCtrl;
     if ((controller == null)) return busyWidget;
     if (!controller.value.isInitialized) {
-      Timer(Duration(seconds: 1), () => state.initCamera());
+      Timer(Duration(seconds: 1), () => widget.state.initCamera());
       return busyWidget;
     }
 
@@ -29,7 +43,7 @@ class DataPickerWidget extends StatelessWidget {
         CameraPreview(
           controller,
           child: CustomPaint(
-            painter: SelectorRect(state),
+            painter: SelectorRect(widget.state),
           ),
         ),
         Padding(
@@ -38,9 +52,9 @@ class DataPickerWidget extends StatelessWidget {
               firstChild: busyWidget,
               secondChild: FloatingActionButton(
                 child: const Icon(Icons.camera),
-                onPressed: () => state.takePhoto(),
+                onPressed: () => widget.state.takePhoto(),
               ),
-              crossFadeState: state.isBusy
+              crossFadeState: widget.state.isBusy
                   ? CrossFadeState.showFirst
                   : CrossFadeState.showSecond,
               duration: Duration(milliseconds: 50),
