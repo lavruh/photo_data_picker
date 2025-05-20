@@ -1,15 +1,15 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
-
 class Recognizer {
-  late File inp;
   final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
 
-  Future<String> recognizeReading() async {
-    final inputImage = InputImage.fromFile(inp);
-    final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
+  Future<String> recognizeReading(Uint8List bitmap,
+      {required int width, required int height}) async {
+    final inputImage =
+        InputImage.fromBitmap(bitmap: bitmap, width: width, height: height);
+    final RecognizedText recognizedText =
+        await textRecognizer.processImage(inputImage);
 
     final text = recognizedText.text;
     return text;

@@ -15,7 +15,7 @@ dependencies {
 
 android {
     namespace = "com.example.photo_data_picker"
-    compileSdkVersion 34
+    compileSdkVersion 35
     ndkVersion "25.1.8937393"
 
     android.buildFeatures.buildConfig true
