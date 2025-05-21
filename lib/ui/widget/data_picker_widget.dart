@@ -12,7 +12,8 @@ class DataPickerWidget extends StatefulWidget {
   State<DataPickerWidget> createState() => _DataPickerWidgetState();
 }
 
-class _DataPickerWidgetState extends State<DataPickerWidget> {
+class _DataPickerWidgetState extends State<DataPickerWidget>
+    with WidgetsBindingObserver {
   late final DataPickerState state;
 
   @override
@@ -20,6 +21,22 @@ class _DataPickerWidgetState extends State<DataPickerWidget> {
     state = widget.state;
     state.addListener(() => setState(() {}));
     super.initState();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    final CameraController? cameraController = state.camCtrl;
+
+    // App state changed before we got the chance to initialize.
+    if (cameraController == null || !cameraController.value.isInitialized) {
+      return;
+    }
+
+    if (s == AppLifecycleState.inactive) {
+      cameraController.dispose();
+    } else if (s == AppLifecycleState.resumed) {
+      state.initCamera();
+    }
   }
 
   @override
