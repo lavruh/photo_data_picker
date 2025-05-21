@@ -12,13 +12,18 @@ class DataPickerState extends ChangeNotifier {
   CameraController? camCtrl;
   FlashMode flashMode = FlashMode.off;
   final Function(String val)? returnWithValue;
+  // Call back with recognized value after taking photo
+  final Function(String val)? onReadingChanged;
   String reading = "";
   final Recognizer rec = Recognizer();
   Uint8List? recognizeRegion;
   final Offset recognizerRelation = Offset(0.6, 0.08);
   bool isBusy = false;
 
-  DataPickerState({this.returnWithValue}) {
+  DataPickerState({
+    this.returnWithValue,
+    this.onReadingChanged,
+  }) {
     initCamera();
   }
 
@@ -54,6 +59,7 @@ class DataPickerState extends ChangeNotifier {
         width: dataImg.width,
         height: dataImg.height,
       );
+      onReadingChanged?.call(reading);
     } on Exception catch (e) {
       developer.log(e.toString());
     }
@@ -117,6 +123,7 @@ class DataPickerState extends ChangeNotifier {
     update();
   }
 
+  //Return back reading confirmed by user on screen
   returnBackWithValue() {
     final fnk = returnWithValue;
     if (fnk == null) return;
