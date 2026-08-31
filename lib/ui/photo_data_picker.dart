@@ -8,5 +8,5 @@ class PhotoDataPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      DataPickerScreen(state: DataPickerState());
+      DataPickerScreen();
 }

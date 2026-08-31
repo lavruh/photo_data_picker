@@ -1,10 +1,11 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_data_picker/domain/data_picker_state.dart';
 import 'package:photo_data_picker/ui/widget/data_picker_widget.dart';
 
 class DataPickerScreen extends StatefulWidget {
-  const DataPickerScreen({super.key, this.meterName, required this.state});
-  final DataPickerState state;
+  const DataPickerScreen({super.key, this.meterName,  this.state});
+  final DataPickerState? state;
   final String? meterName;
 
   @override
@@ -17,18 +18,27 @@ class _DataPickerScreenState extends State<DataPickerScreen> {
 
   @override
   void initState() {
-    state = widget.state;
+    state = widget.state ?? DataPickerState();
     state.addListener(update);
     super.initState();
-    widget.state.initCamera();
+    _setupCamera();
   }
 
-  update() => setState(() {});
+  Future<void> _setupCamera() async {
+    await state.initCamera();
+    if (state.isContinuous) {
+      // Toggle it off then on to trigger the stream start
+      state.isContinuous = false;
+      state.continuesRecognizing();
+    }
+  }
+
+  void update() => setState(() {});
 
   @override
   void dispose() {
     super.dispose();
-    widget.state.disposeCamera();
+    state.disposeCamera();
   }
 
   @override
@@ -43,6 +53,21 @@ class _DataPickerScreenState extends State<DataPickerScreen> {
         child: Scaffold(
           appBar: AppBar(
             title: Text(widget.meterName ?? ""),
+            actions: [
+              IconButton(
+                onPressed: () => state.toggleFlashMode(),
+                icon: Icon(state.flashMode == FlashMode.off
+                    ? Icons.flash_off
+                    : Icons.flash_on),
+              ),
+              IconButton(
+                onPressed: () => state.continuesRecognizing(),
+                icon: Icon(state.isContinuous
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline),
+                tooltip: "Continuous Recognition",
+              ),
+            ],
           ),
           body: SingleChildScrollView(
             child: Column(
@@ -51,6 +76,14 @@ class _DataPickerScreenState extends State<DataPickerScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   DataPickerWidget(state: state),
+                  if (state.recognizeRegion != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Image.memory(
+                        state.recognizeRegion!,
+                        height: 50,
+                      ),
+                    ),
                   ConstrainedBox(
                       constraints: BoxConstraints(
                           maxWidth: MediaQuery.of(context).size.width * 0.9),
@@ -74,7 +107,7 @@ class _DataPickerScreenState extends State<DataPickerScreen> {
                                   icon: Icon(Icons.cleaning_services)),
                               suffix: IconButton(
                                   onPressed: () {
-                                    widget.state.returnBackWithValue();
+                                    state.returnBackWithValue();
                                     setState(() {});
                                   },
                                   icon: const Icon(Icons.check))),
@@ -87,7 +120,7 @@ class _DataPickerScreenState extends State<DataPickerScreen> {
     );
   }
 
-  _setValue(String val) {
-    widget.state.reading = val;
+  void _setValue(String val) {
+    state.reading = val;
   }
 }

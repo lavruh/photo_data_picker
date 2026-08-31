@@ -33,9 +33,14 @@ class _DataPickerWidgetState extends State<DataPickerWidget>
     }
 
     if (s == AppLifecycleState.inactive) {
-      cameraController.dispose();
+      state.disposeCamera();
     } else if (s == AppLifecycleState.resumed) {
-      state.initCamera();
+      state.initCamera().then((_) {
+        if (state.isContinuous) {
+          state.isContinuous = false;
+          state.continuesRecognizing();
+        }
+      });
     }
   }
 
@@ -68,10 +73,12 @@ class _DataPickerWidgetState extends State<DataPickerWidget>
             child: AnimatedCrossFade(
               firstChild: busyWidget,
               secondChild: FloatingActionButton(
-                child: const Icon(Icons.camera),
-                onPressed: () => widget.state.takePhoto(),
+                child: Icon(state.isContinuous ? Icons.stop : Icons.camera),
+                onPressed: () => state.isContinuous
+                    ? state.continuesRecognizing()
+                    : state.takePhoto(),
               ),
-              crossFadeState: widget.state.isBusy
+              crossFadeState: state.isBusy
                   ? CrossFadeState.showFirst
                   : CrossFadeState.showSecond,
               duration: Duration(milliseconds: 50),
