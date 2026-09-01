@@ -37,8 +37,7 @@ class _DataPickerWidgetState extends State<DataPickerWidget>
     } else if (s == AppLifecycleState.resumed) {
       state.initCamera().then((_) {
         if (state.isContinuous) {
-          state.isContinuous = false;
-          state.continuesRecognizing();
+          state.startContinuesRecognizing();
         }
       });
     }
@@ -69,20 +68,14 @@ class _DataPickerWidgetState extends State<DataPickerWidget>
           ),
         ),
         Padding(
-            padding: const EdgeInsets.all(25.0),
-            child: AnimatedCrossFade(
-              firstChild: busyWidget,
-              secondChild: FloatingActionButton(
-                child: Icon(state.isContinuous ? Icons.stop : Icons.camera),
-                onPressed: () => state.isContinuous
-                    ? state.continuesRecognizing()
-                    : state.takePhoto(),
-              ),
-              crossFadeState: state.isBusy
-                  ? CrossFadeState.showFirst
-                  : CrossFadeState.showSecond,
-              duration: Duration(milliseconds: 50),
-            )),
+          padding: const EdgeInsets.all(25.0),
+          child: FloatingActionButton(
+            child: Icon(state.isContinuous ? Icons.stop : Icons.camera),
+            onPressed: () => state.isContinuous
+                ? state.stopContinuesRecognizing()
+                : state.takePhoto(),
+          ),
+        ),
       ],
     );
   }

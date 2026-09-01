@@ -20,6 +20,7 @@ class DataPickerState extends ChangeNotifier {
   Uint8List? recognizeRegion;
   final Offset recognizerRelation = Offset(0.6, 0.08);
   bool isBusy = false;
+  int _consecutiveReadingCount = 0;
   bool _isContinuous;
   bool get isContinuous => _isContinuous;
   set isContinuous(bool val) {
@@ -46,72 +47,32 @@ class DataPickerState extends ChangeNotifier {
   }
 
   Future<void> takePhoto() async {
-    if (isBusy || camCtrl == null || !camCtrl!.value.isInitialized) return;
-    if (camCtrl!.value.isTakingPicture) return;
+    if (_isContinuous) return;
 
-    isBusy = true;
-    update();
+    reading = "";
+    _consecutiveReadingCount = 0;
+    
+    startContinuesRecognizing();
 
-    try {
-      XFile pic = await camCtrl!.takePicture();
-      final bytes = await pic.readAsBytes();
-
-      final result = await _processFileInIsolate(bytes);
-      if (result != null) {
-        recognizeRegion = result.imageBytes;
-        reading = await rec.recognizeReading(
-          result.imageBytes,
-          width: result.width,
-          height: result.height,
-        );
-        onReadingChanged?.call(reading);
-      }
-    } on Exception catch (e) {
-      developer.log("Take photo error: ${e.toString()}");
-    } finally {
-      isBusy = false;
-      update();
+    int elapsed = 0;
+    const int step = 100;
+    while (elapsed < 3000 && _consecutiveReadingCount < 2) {
+      await Future.delayed(const Duration(milliseconds: step));
+      elapsed += step;
     }
+
+    await stopContinuesRecognizing();
   }
 
-  Future<({Uint8List imageBytes, int width, int height})?> _processFileInIsolate(
-      Uint8List bytes) async {
-    final rel = recognizerRelation;
-    return await Isolate.run(() {
-      Image? src = decodeImage(bytes);
-      if (src == null) return null;
-
-      src = bakeOrientation(src);
-
-      double centerX = src.width / 2;
-      double centerY = src.height / 2;
-      double w = src.width * rel.dx;
-      double h = src.height * rel.dy;
-
-      Image cropped = copyCrop(
-        src,
-        x: (centerX - w / 2).toInt(),
-        y: (centerY - h / 2).toInt(),
-        width: w.toInt(),
-        height: h.toInt(),
-      );
-
-      return (
-        imageBytes: encodeJpg(cropped),
-        width: cropped.width,
-        height: cropped.height,
-      );
-    });
-  }
-
-  void continuesRecognizing() async {
+  void toggleContinuesRecognizing() async {
     if (_isContinuous) {
-      _isContinuous = false;
-      await camCtrl?.stopImageStream();
-      update();
-      return;
+      stopContinuesRecognizing();
+    } else {
+      startContinuesRecognizing();
     }
+  }
 
+  Future<void> startContinuesRecognizing() async {
     if (camCtrl == null || !camCtrl!.value.isInitialized) return;
 
     _isContinuous = true;
@@ -126,11 +87,19 @@ class DataPickerState extends ChangeNotifier {
         final result = await _processImageInIsolate(image, sensorOrientation);
         if (result != null) {
           recognizeRegion = result.imageBytes;
-          reading = await rec.recognizeReading(
+          String newReading = await rec.recognizeReading(
             result.imageBytes,
             width: result.width,
             height: result.height,
           );
+          
+          if (newReading.isNotEmpty && newReading == reading) {
+            _consecutiveReadingCount++;
+          } else {
+            _consecutiveReadingCount = newReading.isNotEmpty ? 1 : 0;
+          }
+          
+          reading = newReading;
           onReadingChanged?.call(reading);
         }
       } catch (e) {
@@ -140,6 +109,14 @@ class DataPickerState extends ChangeNotifier {
         update();
       }
     });
+  }
+
+  Future<void> stopContinuesRecognizing() async {
+    if (_isContinuous) {
+      _isContinuous = false;
+      await camCtrl?.stopImageStream();
+      update();
+    }
   }
 
   Future<({Uint8List imageBytes, int width, int height})?>
@@ -224,9 +201,7 @@ class DataPickerState extends ChangeNotifier {
 
   void disposeCamera() async {
     if (camCtrl != null) {
-      if (_isContinuous) {
-        await camCtrl!.stopImageStream();
-      }
+      await stopContinuesRecognizing();
       await camCtrl!.dispose();
     }
   }

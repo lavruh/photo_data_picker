@@ -27,9 +27,7 @@ class _DataPickerScreenState extends State<DataPickerScreen> {
   Future<void> _setupCamera() async {
     await state.initCamera();
     if (state.isContinuous) {
-      // Toggle it off then on to trigger the stream start
-      state.isContinuous = false;
-      state.continuesRecognizing();
+      state.startContinuesRecognizing();
     }
   }
 
@@ -61,7 +59,7 @@ class _DataPickerScreenState extends State<DataPickerScreen> {
                     : Icons.flash_on),
               ),
               IconButton(
-                onPressed: () => state.continuesRecognizing(),
+                onPressed: () => state.toggleContinuesRecognizing(),
                 icon: Icon(state.isContinuous
                     ? Icons.pause_circle_outline
                     : Icons.play_circle_outline),
