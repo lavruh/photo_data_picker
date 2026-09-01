@@ -53,6 +53,11 @@ class _DataPickerScreenState extends State<DataPickerScreen> {
             title: Text(widget.meterName ?? ""),
             actions: [
               IconButton(
+                onPressed: () => _showCameraInfo(),
+                icon: const Icon(Icons.info_outline),
+                tooltip: "Camera Info",
+              ),
+              IconButton(
                 onPressed: () => state.toggleFlashMode(),
                 icon: Icon(state.flashMode == FlashMode.off
                     ? Icons.flash_off
@@ -120,5 +125,33 @@ class _DataPickerScreenState extends State<DataPickerScreen> {
 
   void _setValue(String val) {
     state.reading = val;
+  }
+
+  void _showCameraInfo() {
+    final desc = state.camCtrl?.description;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Camera Information"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Name: ${desc?.name ?? 'Unknown'}"),
+            Text("Lens Direction: ${desc?.lensDirection.name ?? 'Unknown'}"),
+            Text("Sensor Orientation: ${desc?.sensorOrientation ?? 'Unknown'}°"),
+            Text("Image Format: ${state.lastImageFormat ?? 'Waiting for stream...'}"),
+            if (state.camCtrl != null)
+              Text("Resolution: ${state.camCtrl!.value.previewSize?.width.toInt()}x${state.camCtrl!.value.previewSize?.height.toInt()}"),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
   }
 }

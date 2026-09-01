@@ -72,6 +72,8 @@ class DataPickerState extends ChangeNotifier {
     }
   }
 
+  String? lastImageFormat;
+
   Future<void> startContinuesRecognizing() async {
     if (camCtrl == null || !camCtrl!.value.isInitialized) return;
 
@@ -82,13 +84,18 @@ class DataPickerState extends ChangeNotifier {
       if (!_isContinuous || isBusy) return;
       isBusy = true;
 
+      if (lastImageFormat == null || lastImageFormat != image.format.group.name) {
+        lastImageFormat = image.format.group.name;
+        update();
+      }
+
       try {
         final sensorOrientation = camCtrl?.description.sensorOrientation ?? 0;
         final result = await _processImageInIsolate(image, sensorOrientation);
         if (result != null) {
-          recognizeRegion = result.imageBytes;
+          recognizeRegion = result.previewJpg;
           String newReading = await rec.recognizeReading(
-            result.imageBytes,
+            result.rawBgra,
             width: result.width,
             height: result.height,
           );
@@ -119,9 +126,15 @@ class DataPickerState extends ChangeNotifier {
     }
   }
 
-  Future<({Uint8List imageBytes, int width, int height})?>
+  Future<({Uint8List previewJpg, Uint8List rawBgra, int width, int height})?>
       _processImageInIsolate(CameraImage image, int sensorOrientation) async {
-    final planes = image.planes.map((p) => p.bytes).toList();
+    final planes = image.planes
+        .map((p) => ({
+              'bytes': p.bytes,
+              'bytesPerRow': p.bytesPerRow,
+              'bytesPerPixel': p.bytesPerPixel,
+            }))
+        .toList();
     final width = image.width;
     final height = image.height;
     final format = image.format.group;
@@ -135,8 +148,9 @@ class DataPickerState extends ChangeNotifier {
         img = Image.fromBytes(
           width: width,
           height: height,
-          bytes: planes[0].buffer,
+          bytes: (planes[0]['bytes'] as Uint8List).buffer,
           order: ChannelOrder.bgra,
+          rowStride: planes[0]['bytesPerRow'] as int?,
         );
       }
 
@@ -160,8 +174,19 @@ class DataPickerState extends ChangeNotifier {
         height: h.toInt(),
       );
 
+      // Convert to raw BGRA for ML Kit
+      final bgraBytes = Uint8List(cropped.width * cropped.height * 4);
+      int i = 0;
+      for (final pixel in cropped) {
+        bgraBytes[i++] = pixel.b.toInt();
+        bgraBytes[i++] = pixel.g.toInt();
+        bgraBytes[i++] = pixel.r.toInt();
+        bgraBytes[i++] = pixel.a.toInt();
+      }
+
       return (
-        imageBytes: encodeJpg(cropped),
+        previewJpg: encodeJpg(cropped),
+        rawBgra: bgraBytes,
         width: cropped.width,
         height: cropped.height,
       );
@@ -169,21 +194,33 @@ class DataPickerState extends ChangeNotifier {
   }
 
   static Image _convertYUV420ToImage(
-      List<Uint8List> planes, int width, int height) {
+      List<dynamic> planes, int width, int height) {
     final yPlane = planes[0];
     final uPlane = planes[1];
     final vPlane = planes[2];
+
+    final Uint8List yBytes = yPlane['bytes'];
+    final Uint8List uBytes = uPlane['bytes'];
+    final Uint8List vBytes = vPlane['bytes'];
+
+    final int yStride = yPlane['bytesPerRow'];
+    final int uvStride = uPlane['bytesPerRow'];
+    final int? uvPixelStride = uPlane['bytesPerPixel'];
 
     final img = Image(width: width, height: height);
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        final yIndex = y * width + x;
-        final uvIndex = (y ~/ 2) * (width ~/ 2) + (x ~/ 2);
+        final int yIndex = y * yStride + x;
+        final int uvIndex = (y ~/ 2) * uvStride + (x ~/ 2) * (uvPixelStride ?? 1);
 
-        final yp = yPlane[yIndex];
-        final up = uPlane.length > uvIndex ? uPlane[uvIndex] : 128;
-        final vp = vPlane.length > uvIndex ? vPlane[uvIndex] : 128;
+        if (yIndex >= yBytes.length || uvIndex >= uBytes.length || uvIndex >= vBytes.length) {
+          continue;
+        }
+
+        final yp = yBytes[yIndex];
+        final up = uBytes[uvIndex];
+        final vp = vBytes[uvIndex];
 
         int r = (yp + 1.402 * (vp - 128)).round().clamp(0, 255);
         int g = (yp - 0.344136 * (up - 128) - 0.714136 * (vp - 128))
